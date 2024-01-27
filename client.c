@@ -24,7 +24,7 @@ int main(int argc, char const *argv[]) /* Creation de la fonction main */
 {
 	if (argc != 3) /* On vérifie qu'il y ai bien 3 arguments en arrivée */
     {
-        printf("""Merci de creer votre message sous la forme PID destination + 'message' \n""");
+        printf("Merci de creer votre message sous la forme PID destination + \"message\" \n");
 
         return 1;
     }
