@@ -5,17 +5,18 @@
 #include <string.h> /* Manipulation des chaines de caractères et de la mémoire */
 #include <ctype.h> /* Repérage de type de caractères avec les préfixes is-fonction */
 
+
 void traitement_msg(int *message_propre, char *message_brut, int taille_msg) /*fonction permettant de rendre traitable le message reçu */
 {
-    for (int i = 0; i < taille_msg;)
+    int iterator = 0;
+    while (iterator < taille_msg)
     {
-        message_propre[i] = message_brut[i];
-        i++;
+        message_propre[iterator] = message_brut[iterator];
+        iterator++;
     }
-    
-    /* On se positionne au dernier rang du message, puis on ajoute le '\0' pour detection de sa fin */
+
     message_propre[taille_msg] = taille_msg;
-    message_propre[taille_msg + 1] = '\0';
+    message_propre[taille_msg + 1] = '\0'; /* On ajoute le \0 en fin de message pour le rendre lisible correctement */
 
 }
 
@@ -28,43 +29,48 @@ int main(int argc, char const *argv[]) /* Creation de la fonction main */
         return 1;
     }
 
-	int len = strlen(argv[2]);						//message length
+	int len = strlen(argv[2]); /* On intitalise la variable len, prenant la longueur du message en argument. */
 
-	char message[len];								//initialize buffer for message argument
+	char message_brut[len]; /* On intialise la variable message_brut, qui permet d'allouer la mémoire nécessaire au traitement du message */
+
+	int maxlen = 127; /*On initialise la valeur de la longueur max. */
 	
-	if (len > 1000)
+	if (len > maxlen) /* On vérifie la taille du message en entrée */
 	{
-    	fprintf(stderr, "message is too long!\n");
-    	printf("HERE\n");
+    	perror("Le message est trop long, il doit faire moins de 128 caractères\n");
     }
     else
     {
-    	strcpy(message, argv[2]);					//copy argument into buffer
+    	strcpy(message_brut, argv[2]); /* On copie le message passé en argument du client dans la variable crée précedemment */
 
-		int new_message[len + 2];					//initialize integer buffer in order to send message
+		int new_message[len + 2]; /* On crée une nouvelle variable, contenant l'espace mémoire disponible pour le message et le \n. */
 	
-		traitement_msg(new_message, message, len);
+		traitement_msg(new_message, message_brut, len); /* On passe le message entré en argument dans la fonction le rendant "propre" */
 	
-		for (int i = 0; i < len + 2; i++)			//send message
+		int iterator = 0; 
+		int pid = atoi(argv[1]); /* On transforme le PID passé en argument en entier */
+		
+		while (iterator < len + 2) /* On initialise la boucle qui parcours chaque caractère du message propre. */
 		{
-			union sigval value;						//initialize structure containing character value
-			
-			int pid = atoi(argv[1]);				//get pid passed as an argument
 
-			if (!isascii(new_message[i]))			//check if character is ASCII or not
+			union sigval value; /* On utilise la technique d'union de la librairie signal.h, afin de définir une union entre value, et la valeur entière qui lui est associée dans le signal. */
+
+			if (!isascii(new_message[iterator])) /* On utilise la fonction isascii de la librairie ctype.h, afin de vérifier si les caractères font parti de l'ASCII. */
 			{
-				perror("one of the character after is not an ASCII character\n");
+				printf("Merci de ne renseigner que des caractères ASCII.\n");
 				break;
 			}
 
-			value.sival_int = new_message[i];		
+			value.sival_int = new_message[iterator]; /*Après avoir vérifié que le caractère est ASCII, on l'attribue a la valeur du signal */
+			iterator++;
 
-			if(sigqueue(pid, SIGUSR1, value) != 0)	//send character ASCII value
+			if(sigqueue(pid, SIGUSR1, value) != 0)	/* On envoie ensuite le caractère sous forme de valeur du signal SIGUSR1 au pid renseigné, en prennant en compte la gestion d'erreur */
 			{
-				perror("message could not be send\n");
+				perror("Le message n'a pas été envoyé, voici le message d'erreur:\n");
 				break;
 			}
-			sleep(0.01);							//wait to allow server to correctly receive the signal
+			sleep(0.01); /* On  met en place une micropause pour laisser le temps au serveur de recevoir chaque signal à la suite. */
+
 		}
 	}
 
