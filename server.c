@@ -58,7 +58,7 @@ void sig_handler(int sig, siginfo_t* info, void* vp) //fonction qui va s'activer
 void allocation_memoire() //Fonction servant à associer de la mémoire à la variable globale buffer. 
 {
 
-	buffer = malloc(1000 * sizeof *buffer);
+	buffer = malloc(1300 * sizeof *buffer);
 }
 
 int main(int argc, char const *argv[])
