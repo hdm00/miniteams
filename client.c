@@ -37,7 +37,8 @@ int main(int argc, char const *argv[]) /* Creation de la fonction main */
 	
 	if (len > maxlen) /* On vérifie la taille du message en entrée */
 	{
-    	perror("Le message est trop long, il doit faire moins de 128 caractères\n");
+    	printf("Le message est trop long, il doit faire moins de 128 caractères\n");
+    	exit;
     }
     else
     {
