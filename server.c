@@ -32,7 +32,7 @@ void traitement_message(int len, int client_pid)
     	perror("Nous n'avons pas pu ouvrir ni créer le fichier de logs");
     	exit(1);
 	}
-	fprintf(fichierConversation, "FROM CLIENT[%d", client_pid);
+	fprintf(fichierConversation, "[FROM CLIENT %d", client_pid);
 	fprintf(fichierConversation, "] ");
 	fprintf(fichierConversation, "%s - %s\n", temps, message_propre); // Écriture dans le fichier avec le format spécifié
 	fclose(fichierConversation); // Fermeture du fichier
@@ -51,7 +51,7 @@ void sig_handler(int sig, siginfo_t* info, void* vp) //fonction qui va s'activer
 		int client_pid = *(buffer - len - 2);
 
 		buffer -= len + 1; // On se place sur la nouvelle première case du tableau buffer, afin de commencer à traiter le prochain message, qui écrasera ensuite l'ancien.
-		printf("FROM CLIENT[%d", client_pid); //affiche le PID du client
+		printf("[FROM CLIENT %d", client_pid); //affiche le PID du client
 		printf("] "); 
 		traitement_message(len, client_pid); //On traite le message terminé.
 		
