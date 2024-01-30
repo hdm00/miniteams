@@ -44,7 +44,7 @@ int main(int argc, char const *argv[]) /* Creation de la fonction main */
     {
     	strcpy(message_brut, argv[2]); /* On copie le message passé en argument du client dans la variable crée précedemment */
 
-		int new_message[len + 2]; /* On crée une nouvelle variable, contenant l'espace mémoire disponible pour le message et le \n. */
+		int new_message[len + 2]; /* On crée une nouvelle variable, contenant l'espace mémoire disponible pour le message et le \0. */
 	
 		traitement_msg(new_message, message_brut, len); /* On passe le message entré en argument dans la fonction le rendant "propre" */
 	
@@ -70,7 +70,7 @@ int main(int argc, char const *argv[]) /* Creation de la fonction main */
 				perror("Le message n'a pas été envoyé, voici le message d'erreur:\n");
 				break;
 			}
-			sleep(0.01); /* On  met en place une micropause pour laisser le temps au serveur de recevoir chaque signal à la suite. */
+			sleep(1); /* On  met en place une micropause pour laisser le temps au serveur de recevoir chaque signal à la suite. */
 
 		}
 	}
