@@ -2,73 +2,63 @@
 #include <unistd.h> /*Integration pour gestion pause et exit */
 #include <signal.h> /*Integration pour gestion des signals */
 #include <stdlib.h> /*Integration fonction exit */
-#include <fcntl.h> /*Manipulation du fichier de logs */
 #include <time.h> /* Integration de la gestion du temps */
 
-int *buffer;
+int *buffer; //On crée une variable buffer, dont on va définir la taille, et qui va acceuillir le texte envoyé par le client. 
 
-void startup()
+void traitement_message(int len)
 {
+	char message_propre[len + 1]; //On crée la variable message_propre, qui accueille nos caractères pour ensuite être affichée. 
 
-	//allocate max message length size
-	buffer = malloc(128 * sizeof *buffer);
-}
-
-void parser(int len)
-{
-	//Initialize printable message buffer with message length + 1 to allow for null character 
-	char message[len + 1];
-
-	//Copy buffer into printable message buffer
-	for (int i = 0; i < len; i++)
-	{
-		message[i] = *(buffer + i);
+	int iterator = 0;
+	while (iterator < len){
+		message_propre[iterator] = *(buffer + iterator);
+		iterator++;
 	}
 
-	//add null character at the end of the message
-	message[len] = '\0';
+	message_propre[len] = '\0'; //On ajoute le symbole de fin après le message. 
 
-	// Get current time
     time_t current_time;
-    time(&current_time);
+    time(&current_time); //On stocke le temps actuel dans une variable current_time
 
-    // Format time 
-    char timestamp[20];
-    strftime(timestamp, sizeof(timestamp), "%Y-%m-%d %H:%M:%S", localtime(&current_time));
+    char temps[20];
+    strftime(temps, sizeof(temps), "%Y-%m-%d %H:%M:%S", localtime(&current_time)); //On formate le temps sous la forme souhaitée. 
 
-    printf("%s : ", timestamp);
+    printf("%s : ", temps); //Affichage du temps
+	printf("%s \n", message_propre); //Affichage du message
 
-	printf("%s \n", message);
+	FILE *fichierConversation = fopen("conversations.log", "a"); // Ouverture du fichier en mode "ajout"
+	if (fichierConversation == NULL) {
+    	perror("Nous n'avons pas pu ouvrir ni créer le fichier de logs");
+    	exit(1);
+	}
 
-	// Open and write log file in append mode
-    int logFile = open("conversations.log", O_WRONLY | O_APPEND | O_CREAT, 0644);
-    if (logFile == -1)
-    {
-        perror("Could not open log file");
-        exit(1);
-    }
-    write(logFile, timestamp, 20);
-    write(logFile, " : ", 3);
-	write(logFile, message, len);
-	write(logFile, "\n", 1);
+	fprintf(fichierConversation, "%s - %s\n", temps, message_propre); // Écriture dans le fichier avec le format spécifié
+	fclose(fichierConversation); // Fermeture du fichier
 }
 
-void sig_handler(int sig, siginfo_t* info, void* vp)
+void sig_handler(int sig, siginfo_t* info, void* vp) //fonction qui va s'activer à la reception du signal client.
 {
-	int character = info->si_value.sival_int;
+	int lettre = info->si_value.sival_int; // Cette ligne permet de récupérer chaque caractères incluts dans le SIGUSR1 en tant que value.
 
-	*buffer = character;
+	*buffer = lettre; // chaque lettre est ensuite placée dans l'ordre dans la variable buffer
 
 
-	if (*buffer == '\0')			//end of message
+	if (*buffer == '\0') //On repère la fin du message envoyé par le client
 	{
-		int len = *(buffer - 1);	//get length of message
-		buffer -= len + 1;			//reset buffer pointer for future messages
-		parser(len);
+		int len = *(buffer - 1);
+		buffer -= len + 1; // On se place sur la nouvelle première case du tableau buffer, afin de commencer à traiter le prochain message, qui écrasera ensuite l'ancien. 
+		traitement_message(len); //On traite le message terminé.
 		
-	}	
-	else							
-		buffer++;					//set buffer pointer for the next character
+	}
+	else
+		buffer++; // le buffer se place à la case suivante
+}
+
+void allocation_memoire() //Fonction servant à associer de la mémoire à la variable globale buffer. 
+{
+
+	buffer = malloc(1000 * sizeof *buffer);
 }
 
 int main(int argc, char const *argv[])
@@ -76,18 +66,18 @@ int main(int argc, char const *argv[])
 	printf("Miniteams starting...\n");
 	printf("My PID is %i\n", getpid());
 	printf("Waiting for new messages\n");
-	startup();
-	struct sigaction sa;
-	sa.sa_flags = SA_SIGINFO;
-	sa.sa_sigaction = sig_handler;
+	allocation_memoire();
+	struct sigaction gestion_signal; // On crée la variable gestion_signal, qui va préciser les actions à effectuer à la reception du signal.
+	gestion_signal.sa_flags = SA_SIGINFO; //On renseigne le fait que le handler doit prendre en compte l'info du signal en plus du signal seul. 
+	gestion_signal.sa_sigaction = sig_handler; //On renseigne la fonction sig_handler comme la fonction a executer lors de la reception du signal USR1.
 
-	sigaction(SIGUSR1, &sa, NULL);
+	sigaction(SIGUSR1, &gestion_signal, NULL); //Cette ligne indique que le signal SIGUSR1 est receptionné et traité par la variable gestion signal.
 
 	while(1)
 	{
-		pause();
+		pause(); //Creation d'une boucle
 	}
 
-	free(buffer);
+	free(buffer); //On relache le buffer. 
 	return 0;
 }
