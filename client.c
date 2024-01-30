@@ -33,14 +33,14 @@ int main(int argc, char const *argv[]) /* Creation de la fonction main */
 
 	char message_brut[len]; /* On intialise la variable message_brut, qui permet d'allouer la mémoire nécessaire au traitement du message */
 
-	int maxlen = 127; /*On initialise la valeur de la longueur max. */
+	int maxlen = 1200; /*On initialise la valeur de la longueur max. */
 	
-	//if (len > maxlen) /* On vérifie la taille du message en entrée */
-	//{
-    //	printf("Le message est trop long, il doit faire moins de 128 caractères\n");
-    //	exit;
-    //}
-    //else
+	if (len > maxlen) /* On vérifie la taille du message en entrée */
+	{
+    	printf("Le message est trop long, il doit faire moins de 1200 caractères\n");
+    	exit;
+    }
+    else
     {
     	strcpy(message_brut, argv[2]); /* On copie le message passé en argument du client dans la variable crée précedemment */
 
@@ -70,7 +70,7 @@ int main(int argc, char const *argv[]) /* Creation de la fonction main */
 				perror("Le message n'a pas été envoyé, voici le message d'erreur:\n");
 				break;
 			}
-			usleep(500); /* On  met en place une micropause pour laisser le temps au serveur de recevoir chaque signal à la suite. */
+			usleep(700); /* On  met en place une micropause pour laisser le temps au serveur de recevoir chaque signal à la suite. */
 
 		}
 	}
