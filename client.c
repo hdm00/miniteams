@@ -35,12 +35,12 @@ int main(int argc, char const *argv[]) /* Creation de la fonction main */
 
 	int maxlen = 127; /*On initialise la valeur de la longueur max. */
 	
-	if (len > maxlen) /* On vérifie la taille du message en entrée */
-	{
-    	printf("Le message est trop long, il doit faire moins de 128 caractères\n");
-    	exit;
-    }
-    else
+	//if (len > maxlen) /* On vérifie la taille du message en entrée */
+	//{
+    //	printf("Le message est trop long, il doit faire moins de 128 caractères\n");
+    //	exit;
+    //}
+    //else
     {
     	strcpy(message_brut, argv[2]); /* On copie le message passé en argument du client dans la variable crée précedemment */
 
@@ -56,11 +56,11 @@ int main(int argc, char const *argv[]) /* Creation de la fonction main */
 
 			union sigval value; /* On utilise la technique d'union de la librairie signal.h, afin de définir une union entre value, et la valeur entière qui lui est associée dans le signal. */
 
-			if (!isascii(new_message[iterator])) /* On utilise la fonction isascii de la librairie ctype.h, afin de vérifier si les caractères font parti de l'ASCII. */
-			{
-				printf("Merci de ne renseigner que des caractères ASCII.\n");
-				break;
-			}
+			//if (!isascii(new_message[iterator])) /* On utilise la fonction isascii de la librairie ctype.h, afin de vérifier si les caractères font parti de l'ASCII. */
+			//{
+			//	printf("Merci de ne renseigner que des caractères ASCII.\n");
+			//	break;
+			//}
 
 			value.sival_int = new_message[iterator]; /*Après avoir vérifié que le caractère est ASCII, on l'attribue a la valeur du signal */
 			iterator++;
@@ -70,7 +70,7 @@ int main(int argc, char const *argv[]) /* Creation de la fonction main */
 				perror("Le message n'a pas été envoyé, voici le message d'erreur:\n");
 				break;
 			}
-			sleep(1); /* On  met en place une micropause pour laisser le temps au serveur de recevoir chaque signal à la suite. */
+			usleep(500); /* On  met en place une micropause pour laisser le temps au serveur de recevoir chaque signal à la suite. */
 
 		}
 	}
