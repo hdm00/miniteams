@@ -82,6 +82,8 @@ int main(int argc, char const *argv[]) /* Creation de la fonction main */
 			usleep(700); /* On  met en place une micropause pour laisser le temps au serveur de recevoir chaque signal à la suite. */
 
 		}
+		printf("Message envoyé !");
+		printf("\n");
 	}
 
 	return 0;
