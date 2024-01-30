@@ -2,78 +2,87 @@
 #include <unistd.h> /*Integration pour gestion pause et exit */
 #include <signal.h> /*Integration pour gestion des signals */
 #include <stdlib.h> /*Integration fonction exit */
-#include <string.h> /* Manipulation des chaines de caractères et de la mémoire */
-#include <ctype.h> /* Repérage de type de caractères avec les préfixes is-fonction */
+#include <time.h> /* Integration de la gestion du temps */
 
+int *buffer; //On crée une variable buffer, dont on va définir la taille, et qui va acceuillir le texte envoyé par le client. 
 
-void traitement_msg(int *message_propre, char *message_brut, int taille_msg) /*fonction permettant de rendre traitable le message reçu */
+void traitement_message(int len, int client_pid)
 {
-    int iterator = 0;
-    while (iterator < taille_msg)
-    {
-        message_propre[iterator] = message_brut[iterator];
-        iterator++;
-    }
+	char message_propre[len + 1]; //On crée la variable message_propre, qui accueille nos caractères pour ensuite être affichée. 
 
-    message_propre[taille_msg] = taille_msg;
-    message_propre[taille_msg + 1] = '\0'; /* On ajoute le \0 en fin de message pour le rendre lisible correctement */
-
-}
-
-int main(int argc, char const *argv[]) /* Creation de la fonction main */
-{
-	if (argc != 3) /* On vérifie qu'il y ai bien 3 arguments en arrivée */
-    {
-        printf("Merci de creer votre message sous la forme PID destination + \"message\" \n");
-
-        return 1;
-    }
-
-	int len = strlen(argv[2]); /* On intitalise la variable len, prenant la longueur du message en argument. */
-
-	char message_brut[len]; /* On intialise la variable message_brut, qui permet d'allouer la mémoire nécessaire au traitement du message */
-
-	int maxlen = 1200; /*On initialise la valeur de la longueur max. */
-	
-	if (len > maxlen) /* On vérifie la taille du message en entrée */
-	{
-    	printf("Le message est trop long, il doit faire moins de 1200 caractères\n");
-    	exit;
-    }
-    else
-    {
-    	strcpy(message_brut, argv[2]); /* On copie le message passé en argument du client dans la variable crée précedemment */
-
-		int new_message[len + 2]; /* On crée une nouvelle variable, contenant l'espace mémoire disponible pour le message et le \0. */
-	
-		traitement_msg(new_message, message_brut, len); /* On passe le message entré en argument dans la fonction le rendant "propre" */
-	
-		int iterator = 0; 
-		int pid = atoi(argv[1]); /* On transforme le PID passé en argument en entier */
-		
-		while (iterator < len + 2) /* On initialise la boucle qui parcours chaque caractère du message propre. */
-		{
-
-			union sigval value; /* On utilise la technique d'union de la librairie signal.h, afin de définir une union entre value, et la valeur entière qui lui est associée dans le signal. */
-
-			//if (!isascii(new_message[iterator])) /* On utilise la fonction isascii de la librairie ctype.h, afin de vérifier si les caractères font parti de l'ASCII. */
-			//{
-			//	printf("Merci de ne renseigner que des caractères ASCII.\n");
-			//	break;
-			//}
-
-			value.sival_int = new_message[iterator]; /*Après avoir vérifié que le caractère est ASCII, on l'attribue a la valeur du signal */
-			iterator++;
-
-			if(sigqueue(pid, SIGUSR1, value) != 0)	/* On envoie ensuite le caractère sous forme de valeur du signal SIGUSR1 au pid renseigné, en prennant en compte la gestion d'erreur */
-			{
-				perror("Le message n'a pas été envoyé, voici le message d'erreur:\n");
-				break;
-			}
-			usleep(700); /* On  met en place une micropause pour laisser le temps au serveur de recevoir chaque signal à la suite. */
-
-		}
+	int iterator = 0;
+	while (iterator < len){
+		message_propre[iterator] = *(buffer + iterator);
+		iterator++;
 	}
 
+	message_propre[len] = '\0'; //On ajoute le symbole de fin après le message. 
+
+    time_t current_time;
+    time(&current_time); //On stocke le temps actuel dans une variable current_time
+
+    char temps[20];
+    strftime(temps, sizeof(temps), "%Y-%m-%d %H:%M:%S", localtime(&current_time)); //On formate le temps sous la forme souhaitée. 
+
+    printf("%s : ", temps); //Affichage du temps
+	printf("%s \n", message_propre); //Affichage du message
+
+	FILE *fichierConversation = fopen("conversations.log", "a"); // Ouverture du fichier en mode "ajout"
+	if (fichierConversation == NULL) {
+    	perror("Nous n'avons pas pu ouvrir ni créer le fichier de logs");
+    	exit(1);
+	}
+	fprintf(fichierConversation, "FROM CLIENT[%d", client_pid);
+	fprintf(fichierConversation, "] ");
+	fprintf(fichierConversation, "%s - %s\n", temps, message_propre); // Écriture dans le fichier avec le format spécifié
+	fclose(fichierConversation); // Fermeture du fichier
+}
+
+void sig_handler(int sig, siginfo_t* info, void* vp) //fonction qui va s'activer à la reception du signal client.
+{
+	int lettre = info->si_value.sival_int; // Cette ligne permet de récupérer chaque caractères incluts dans le SIGUSR1 en tant que value.
+
+	*buffer = lettre; // chaque lettre est ensuite placée dans l'ordre dans la variable buffer
+
+
+	if (*buffer == '\0') //On repère la fin du message envoyé par le client
+	{
+		int len = *(buffer - 1);
+		int client_pid = *(buffer - len - 2);
+
+		buffer -= len + 1; // On se place sur la nouvelle première case du tableau buffer, afin de commencer à traiter le prochain message, qui écrasera ensuite l'ancien.
+		printf("FROM CLIENT[%d", client_pid); //affiche le PID du client
+		printf("] "); 
+		traitement_message(len, client_pid); //On traite le message terminé.
+		
+	}
+	else
+		buffer++; // le buffer se place à la case suivante
+}
+
+void allocation_memoire() //Fonction servant à associer de la mémoire à la variable globale buffer. 
+{
+
+	buffer = malloc(1300 * sizeof *buffer);
+}
+
+int main(int argc, char const *argv[])
+{
+	printf("Miniteams starting...\n");
+	printf("My PID is %i\n", getpid());
+	printf("Waiting for new messages\n");
+	allocation_memoire();
+	struct sigaction gestion_signal; // On crée la variable gestion_signal, qui va préciser les actions à effectuer à la reception du signal.
+	gestion_signal.sa_flags = SA_SIGINFO; //On renseigne le fait que le handler doit prendre en compte l'info du signal en plus du signal seul. 
+	gestion_signal.sa_sigaction = sig_handler; //On renseigne la fonction sig_handler comme la fonction a executer lors de la reception du signal USR1.
+
+	sigaction(SIGUSR1, &gestion_signal, NULL); //Cette ligne indique que le signal SIGUSR1 est receptionné et traité par la variable gestion signal.
+
+	while(1)
+	{
+		pause(); //Creation d'une boucle
+	}
+
+	free(buffer); //On relache le buffer. 
 	return 0;
 }
