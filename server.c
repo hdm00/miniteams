@@ -1,20 +1,17 @@
-#include <signal.h>
-#include <unistd.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <fcntl.h>
-#include <time.h>
+#include <stdio.h> /* librairie de base */
+#include <unistd.h> /*Integration pour gestion pause et exit */
+#include <signal.h> /*Integration pour gestion des signals */
+#include <stdlib.h> /*Integration fonction exit */
+#include <fcntl.h> /*Manipulation du fichier de logs */
+#include <time.h> /* Integration de la gestion du temps */
 
 int *buffer;
 
 void startup()
 {
-	printf("Miniteams starting...\n");
-	printf("My PID is %i\n", getpid());
-	printf("Waiting for new messages\n");
 
 	//allocate max message length size
-	buffer = malloc(1010 * sizeof *buffer);
+	buffer = malloc(128 * sizeof *buffer);
 }
 
 void parser(int len)
@@ -76,6 +73,9 @@ void sig_handler(int sig, siginfo_t* info, void* vp)
 
 int main(int argc, char const *argv[])
 {
+	printf("Miniteams starting...\n");
+	printf("My PID is %i\n", getpid());
+	printf("Waiting for new messages\n");
 	startup();
 	struct sigaction sa;
 	sa.sa_flags = SA_SIGINFO;
