@@ -2,6 +2,7 @@
 #include<stdlib.h>
 #include<sys/socket.h>
 #include<arpa/inet.h> // inet_addr
+#include<string.h>
 
 int main(int argc, char *argv[]) 
 {
@@ -12,7 +13,7 @@ int main(int argc, char *argv[])
     struct sockaddr_in server;
 
     // Vérification du nombre d'arguments
-    if (argc < 3) 
+    if (argc < 4) 
     {
         printf("Usage: %s <server_ip> <server_port>\n", argv[0]);
         return 1;
@@ -21,6 +22,7 @@ int main(int argc, char *argv[])
     // Obtention de l'adresse IP et du port du serveur à partir des arguments de la ligne de commande
     char *ip_srv = argv[1];
     int port_srv = atoi(argv[2]);
+    char *message_entre = argv[3];
 
     // creation du socket -> socket_desc
     socket_desc = socket(AF_INET, SOCK_STREAM, 0);
@@ -45,5 +47,13 @@ int main(int argc, char *argv[])
     }
 
     puts("Connected");
-    return 0;
+
+    // envoie de donnees 
+    if (send(socket_desc, message_entre, strlen(message_entre), 0) < 0)
+    {
+        puts("Send failed\n");
+        return 1;
+    }
+
+    puts("Data Sent\n");
 }
