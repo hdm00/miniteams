@@ -6,7 +6,12 @@
 
 int main(int argc, char **argv)
 {
-    char *hostname = "www.google.com";
+    if(argc != 2){
+        printf("Merci de renseigner le nom de domaine a la suite du nom du programme.\n");
+        return 0;
+    }
+    char *hostname = argv[1];
+    printf("hostname : %s\n", hostname);
     char ip[16];
     struct hostent *he;
     struct in_addr **addr_list;
