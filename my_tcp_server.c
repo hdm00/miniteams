@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
             return 1;
         }
 
-        printf("Message received from client: %s\n", client_message);
+        printf("Message from client %s:%d --> %s\n", inet_ntoa(client.sin_addr), ntohs(client.sin_port), client_message);
     }
 
     return 0;
