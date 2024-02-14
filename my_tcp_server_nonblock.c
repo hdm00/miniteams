@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
             if (errno == EWOULDBLOCK || errno == EAGAIN)
             {
                 // Ressource temporairement non disponible, continuer à attendre
-                printf("je suis en train d'attendre\n");
+                printf("Nothing to recv in socket, sleeping for 2 seconds...\n");
                 sleep(2);
                 continue;
             }
@@ -71,22 +71,14 @@ int main(int argc, char *argv[])
             return 1;
         }
 
-        //Receive a message from client
-        int recv_result;
-        do {
-            recv_result = recv(new_socket, client_message, 2000, 0);
-            if (recv_result > 0) {
-                printf("Message from client %s:%d --> %s\n", inet_ntoa(client.sin_addr), ntohs(client.sin_port), client_message);
-            } else if (recv_result < 0 && errno != EWOULDBLOCK) {
-                perror("Receive failed\n");
-                return 1;
-            }
-            // Sleeping for 2 seconds...
-            sleep(2);
-        } while (recv_result == -1);
+//Receive a message from client
+        if (recv(new_socket, client_message, 2000, 0) < 0)
+        {
+            puts("Receive failed\n");
+            return 1;
+        }
 
-        // Close the socket after receiving the message
-        close(new_socket);
+        printf("Message from client %s:%d --> %s\n", inet_ntoa(client.sin_addr), ntohs(client.sin_port), client_message);
     }
 
     return 0;
