@@ -6,20 +6,20 @@
 
 int main(int argc, char *argv[]) 
 {
-    printf("Début main\n");
     // variables
     int socket_desc, new_socket, c;
     // creation d'un objet de type sockaddr_in
     struct sockaddr_in server, client;
+    char client_message[2000];
 
     // Vérification du nombre d'arguments
     if (argc < 2)
     {
-        printf("Usage: %s <server_ip> <server_port>\n", argv[0]);
+        printf("Usage: %s <server_port>\n", argv[0]);
         return 1;
     }
 
-    // Obtention de l'adresse IP et du port du serveur à partir des arguments de la ligne de commande
+    // Obtention du port du serveur à partir des arguments de la ligne de commande
     int port_srv = atoi(argv[1]);
 
     // creation du socket -> socket_desc
@@ -34,11 +34,12 @@ int main(int argc, char *argv[])
     printf("Port: %d\n", port_srv);
     server.sin_family = AF_INET;
     server.sin_addr.s_addr = INADDR_ANY;
-    server.sin_port = htons (port_srv);
+    server.sin_port = htons(port_srv);
 
     if (bind(socket_desc, (struct sockaddr *)&server, sizeof(server)) < 0)
     {
         puts("\nbind failed\n");
+        return 1;
     }
     puts("\nbinding done\n");
 
@@ -46,15 +47,28 @@ int main(int argc, char *argv[])
     listen(socket_desc, 3);
 
     //Accept incoming connection
-    puts("Waiting for incoming connections... \n");
+    puts("Waiting for client message... \n");
     c = sizeof(struct sockaddr_in);
-    new_socket = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c);
-    if (new_socket < 0);
-    {
-        perror("Accept failed\n");
-    }
 
-    puts("Connection accepted\n")
+    // Boucle pour accepter plusieurs connexions
+    while (1)
+    {
+        new_socket = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c);
+        if (new_socket < 0)
+        {
+            perror("Accept failed\n");
+            return 1;
+        }
+
+        //Receive a message from client
+        if (recv(new_socket, client_message, 2000, 0) < 0)
+        {
+            puts("Receive failed\n");
+            return 1;
+        }
+
+        printf("Message received from client: %s\n", client_message);
+    }
 
     return 0;
 }
