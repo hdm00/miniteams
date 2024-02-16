@@ -3,15 +3,43 @@
 #include<netdb.h>
 #include<unistd.h>
 #include<string.h>
+#include<pthread.h>
 
-int main (int argc, char **argv) {
+#define BUFFER_SIZE 256
+
+struct thread_args {
+    int socket_desc;
+};
+
+void *receive_messages(void *args) {
+    struct thread_args *targs = (struct thread_args *) args;
+    char buffer[BUFFER_SIZE];
+    int n;
+
+    while (1) {
+        bzero(buffer, BUFFER_SIZE);
+        n = read(targs->socket_desc, buffer, BUFFER_SIZE - 1);
+        if (n < 0) {
+            perror("ERROR reading from socket");
+            exit(1);
+        } else if (n == 0) {
+            printf("Connection closed by server.\n");
+            exit(0);
+        }
+        printf("Message from server: %s\n", buffer);
+    }
+}
+
+int main(int argc, char **argv) {
     int socket_desc;
     int portno;
-    int n;
     struct sockaddr_in server_addr;
     struct hostent *server;
+    pthread_t tid;
+    struct thread_args targs;
 
-    char buffer[256];
+    char buffer[BUFFER_SIZE];
+    int n;
 
     if (argc < 3) {
         fprintf(stderr, "usage %s hostname port\n", argv[0]);
@@ -20,7 +48,7 @@ int main (int argc, char **argv) {
 
     portno = atoi(argv[2]);
 
-    // creation socket
+    // création socket
     socket_desc = socket(AF_INET, SOCK_STREAM, 0);
     if (socket_desc < 0) {
         perror("ERROR opening socket");
@@ -45,9 +73,9 @@ int main (int argc, char **argv) {
         exit(1);
     }
 
-        // Lecture de la réponse du serveur
-    bzero(buffer, 256);
-    n = read(socket_desc, buffer, 255);
+    // Lecture de la réponse du serveur
+    bzero(buffer, BUFFER_SIZE);
+    n = read(socket_desc, buffer, BUFFER_SIZE - 1);
     if (n < 0) {
         perror("ERROR reading from socket");
         exit(1);
@@ -55,20 +83,23 @@ int main (int argc, char **argv) {
 
     printf("Server response: %s\n", buffer);
 
-    // demande a l'utilisateur d'ecrire un message qui sera affiche chez le serveur
-    printf("Please enter a message: ");
-    bzero(buffer,256);
-    fgets(buffer,255,stdin);
+    // Lancement du thread pour la réception des messages
+    targs.socket_desc = socket_desc;
+    pthread_create(&tid, NULL, receive_messages, (void *) &targs);
 
-    // envoie du message
-    n = write(socket_desc, buffer, 255);
+    // Boucle principale pour l'envoi de messages
+    while (1) {
+        printf("Please enter a message: ");
+        bzero(buffer, BUFFER_SIZE);
+        fgets(buffer, BUFFER_SIZE - 1, stdin);
 
-    if (n < 0) {
-        perror("ERROR reading from socket");
-        exit(1);
+        // envoie du message
+        n = write(socket_desc, buffer, strlen(buffer));
+        if (n < 0) {
+            perror("ERROR writing to socket");
+            exit(1);
+        }
     }
-
-    printf("%s\n", buffer);
 
     return 0;
 }
