@@ -60,7 +60,7 @@ int main(void)
         }
         else if (status == 0)
         {
-            printf("[Server] Waiting...\n");
+            //printf("[Server] Waiting...\n");
             continue;
         }
 
@@ -72,7 +72,7 @@ int main(void)
                 i++;
                 continue;
             }
-            printf("[%d] Ready for I/O operation\n", i);
+            //printf("[%d] Ready for I/O operation\n", i);
             if (i == server_socket)
                 accept_new_connection(server_socket, &all_sockets, &fd_max, client_sockets, &num_clients);
             else
@@ -141,7 +141,7 @@ void accept_new_connection(int server_socket, fd_set *all_sockets, int *fd_max, 
 
     printf("[Server] Accepted new connection on client socket %d.\n", client_fd);
     memset(&msg_to_send, '\0', sizeof msg_to_send);
-    sprintf(msg_to_send, "Welcome. You are client fd [%d]\n", client_fd);
+    sprintf(msg_to_send, "Welcome. You are client [%d]\n", client_fd);
     status = send(client_fd, msg_to_send, strlen(msg_to_send), 0);
     if (status == -1)
         printf("[Server] Send error to client %d: %s\n", client_fd, strerror(errno));
