@@ -26,7 +26,7 @@ void *receive_messages(void *args) {
             printf("Connection closed by server.\n");
             exit(0);
         }
-        printf("Message from server: %s\n", buffer);
+        printf("\nNouveau message: %s", buffer);
     }
 }
 
@@ -81,7 +81,8 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
-    printf("Server response: %s\n", buffer);
+    printf("\033[2J");
+    printf("[SERVER]: %s\n", buffer);
 
     // Lancement du thread pour la réception des messages
     targs.socket_desc = socket_desc;
