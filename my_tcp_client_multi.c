@@ -27,6 +27,8 @@ void *receive_messages(void *args) {
             exit(0);
         }
         printf("\nNouveau message: %s", buffer);
+        printf("\nPlease enter a message: "); // Rafraîchit le message d'invitation
+        fflush(stdout); // Assure l'affichage immédiat
     }
 }
 
