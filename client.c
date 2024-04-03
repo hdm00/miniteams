@@ -1,90 +1,119 @@
-#include <stdio.h> /* librairie de base */
-#include <unistd.h> /*Integration pour gestion pause et exit */
-#include <signal.h> /*Integration pour gestion des signals */
-#include <stdlib.h> /*Integration fonction exit */
-#include <string.h> /* Manipulation des chaines de caractères et de la mémoire */
-#include <ctype.h> /* Repérage de type de caractères avec les préfixes is-fonction */
+#include <stdio.h>
+#include <stdlib.h>
+#include <netdb.h>
+#include <unistd.h>
+#include <string.h>
+#include <pthread.h>
 
+#define BUFFER_SIZE 256
 
-void traitement_msg(int *message_propre, char *message_brut, int taille_msg) /*fonction permettant de rendre traitable le message reçu */
-{
-    int iterator = 0;
-    while (iterator < taille_msg)
-    {
-        message_propre[iterator] = message_brut[iterator];
-        iterator++;
+struct thread_args {
+    int socket_desc; // Structure pour passer les arguments au thread
+};
+
+// Fonction exécutée par le thread pour recevoir les messages du serveur
+void *receive_messages(void *args) {
+    struct thread_args *targs = (struct thread_args *) args;
+    char buffer[BUFFER_SIZE];
+    int n;
+
+    // Boucle pour recevoir en continu les messages du serveur
+    while (1) {
+        bzero(buffer, BUFFER_SIZE); // Efface le contenu du tampon
+        n = read(targs->socket_desc, buffer, BUFFER_SIZE - 1); // Lecture du message du serveur
+        if (n < 0) {
+            perror("ERROR reading from socket"); // Affiche une erreur si la lecture échoue
+            exit(1);
+        } else if (n == 0) {
+            printf("Connection closed by server.\n"); // Indique que le serveur a fermé la connexion
+            exit(0);
+        }
+        printf("\n%s", buffer); // Affiche le message reçu du serveur
+        printf("\nPlease enter a message: "); // Invite l'utilisateur à saisir un message
+        fflush(stdout); // Assure l'affichage immédiat, évite que les boucles empiètent l'une sur l'autre
     }
-
-    message_propre[taille_msg] = taille_msg;
-    message_propre[taille_msg + 1] = '\0'; /* On ajoute le \0 en fin de message pour le rendre lisible correctement */
-
 }
 
-int main(int argc, char const *argv[]) /* Creation de la fonction main */
-{
-	if (argc != 3) /* On vérifie qu'il y ai bien 3 arguments en arrivée */
-    {
-        printf("Merci de creer votre message sous la forme PID destination + \"message\" \n");
+int main(int argc, char **argv) {
+    int socket_desc; // Descripteur de socket
+    int portno; // Numéro de port
+    struct sockaddr_in server_addr; // Structure pour les informations du serveur
+    struct hostent *server; // Structure pour l'hôte
+    pthread_t tid; // Identifiant du thread
+    struct thread_args targs; // Structure pour les arguments du thread
 
-        return 1;
+    char buffer[BUFFER_SIZE]; // Tampon pour stocker les messages
+    int n;
+
+    // Vérifie les arguments de la ligne de commande
+    if (argc < 4) {
+        fprintf(stderr, "usage %s hostname port nickname\n", argv[0]);
+        exit(0);
     }
 
-	int len = strlen(argv[2]); /* On intitalise la variable len, prenant la longueur du message en argument. */
+    portno = atoi(argv[2]); // Convertit le numéro de port en entier
 
-	char message_brut[len]; /* On intialise la variable message_brut, qui permet d'allouer la mémoire nécessaire au traitement du message */
-
-	int maxlen = 1200; /*On initialise la valeur de la longueur max. */
-	
-	if (len > maxlen) /* On vérifie la taille du message en entrée */
-	{
-    	printf("Le message est trop long, il doit faire moins de 1200 caractères\n");
-    	exit;
+    // Crée une socket
+    socket_desc = socket(AF_INET, SOCK_STREAM, 0);
+    if (socket_desc < 0) {
+        perror("ERROR opening socket"); // Affiche une erreur en cas d'échec de création de la socket
+        exit(1);
     }
-    else
-    {
-    	strcpy(message_brut, argv[2]); /* On copie le message passé en argument du client dans la variable crée précedemment */
 
-		int new_message[len + 2]; /* On crée une nouvelle variable, contenant l'espace mémoire disponible pour le message et le \0. */
-	
-		traitement_msg(new_message, message_brut, len); /* On passe le message entré en argument dans la fonction le rendant "propre" */
-	
-		int iterator = 0; 
-		int pid = atoi(argv[1]); /* On transforme le PID passé en argument en entier */
+    server = gethostbyname(argv[1]); // Récupère les informations sur le serveur
 
-		// Ajoute le PID du client avant le message
-		union sigval pid_value;
-		pid_value.sival_int = getpid(); //Stocke le PID du client
-		if(sigqueue(pid, SIGUSR1, pid_value) != 0) {  //Vérifie la réussite de l'envoi du PID
-			perror("Le PID n'a pas été envoyé, voici le message d'erreur:\n");
-			return 1;
-		}
-		usleep(700);
-		
-		while (iterator < len + 2) /* On initialise la boucle qui parcours chaque caractère du message propre. */
-		{
+    if (server == NULL) {
+        fprintf(stderr, "ERROR, no such host\n"); // Affiche une erreur si l'hôte est introuvable
+        exit(0);
+    }
 
-			union sigval value; /* On utilise la technique d'union de la librairie signal.h, afin de définir une union entre value, et la valeur entière qui lui est associée dans le signal. */
+    // Initialise la structure de l'adresse du serveur
+    bzero((char *) &server_addr, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    bcopy((char *)server->h_addr, (char *) &server_addr.sin_addr.s_addr, server->h_length);
+    server_addr.sin_port = htons(portno);
 
-			//if (!isascii(new_message[iterator])) /* On utilise la fonction isascii de la librairie ctype.h, afin de vérifier si les caractères font parti de l'ASCII. */
-			//{
-			//	printf("Merci de ne renseigner que des caractères ASCII.\n");
-			//	break;
-			//}
+    // Établit la connexion avec le serveur
+    if (connect(socket_desc, (struct sockaddr*) &server_addr, sizeof(server_addr)) < 0) {
+        perror("ERROR connecting"); // Affiche une erreur en cas d'échec de connexion au serveur
+        exit(1);
+    }
 
-			value.sival_int = new_message[iterator]; /*Après avoir vérifié que le caractère est ASCII, on l'attribue a la valeur du signal */
-			iterator++;
+    // Envoie le pseudonyme au serveur
+    n = write(socket_desc, argv[3], strlen(argv[3]));
+    if (n < 0) {
+        perror("ERROR writing to socket"); // Affiche une erreur en cas d'échec d'envoi du pseudonyme
+        exit(1);
+    }
 
-			if(sigqueue(pid, SIGUSR1, value) != 0)	/* On envoie ensuite le caractère sous forme de valeur du signal SIGUSR1 au pid renseigné, en prennant en compte la gestion d'erreur */
-			{
-				perror("Le message n'a pas été envoyé, voici le message d'erreur:\n");
-				break;
-			}
-			usleep(700); /* On  met en place une micropause pour laisser le temps au serveur de recevoir chaque signal à la suite. */
+    // Lit la réponse du serveur
+    bzero(buffer, BUFFER_SIZE);
+    n = read(socket_desc, buffer, BUFFER_SIZE - 1);
+    if (n < 0) {
+        perror("ERROR reading from socket"); // Affiche une erreur en cas d'échec de lecture de la réponse du serveur
+        exit(1);
+    }
 
-		}
-		printf("Message envoyé !");
-		printf("\n");
-	}
+    printf("\033[2J"); // Efface l'écran
+    printf("[SERVER]: %s\n", buffer); // Affiche la réponse du serveur
 
-	return 0;
+    // Lancement du thread pour la réception des messages
+    targs.socket_desc = socket_desc;
+    pthread_create(&tid, NULL, receive_messages, (void *) &targs);
+
+    // Boucle principale pour l'envoi de messages
+    while (1) {
+        printf("Please enter a message: ");
+        bzero(buffer, BUFFER_SIZE);
+        fgets(buffer, BUFFER_SIZE - 1, stdin); // Lecture du message à envoyer depuis l'entrée standard
+
+        // Envoie du message
+        n = write(socket_desc, buffer, strlen(buffer));
+        if (n < 0) {
+            perror("ERROR writing to socket"); // Affiche une erreur en cas d'échec d'envoi du message
+            exit(1);
+        }
+    }
+
+    return 0;
 }
